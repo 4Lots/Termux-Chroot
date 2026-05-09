@@ -1,16 +1,10 @@
-#!/bin/sh
-# ==============================================================================
-# Script Name: start_ubuntu.sh
-# Description: Professional Chroot Environment Manager for Ubuntu (CLI Mode)
-# Target OS:   Android (arm64)
-# Device:      Redmi Note 9 Pro (Curtana)
-# ==============================================================================
-
+#!/system/bin/sh
+#
 # ------------------------------------------------------------------------------
 # 1. Configuration Variables
 # ------------------------------------------------------------------------------
 # Centralized variables make it easy to update paths without hunting through code.
-UBUNTU_ROOT="/data/local/Ubuntu/rootfs"
+UBUNTU_ROOT="/data/local/ubuntu/rootfs"
 HOST_SDCARD="/sdcard"
 CHROOT_SDCARD="$UBUNTU_ROOT/media/sdcard"
 
