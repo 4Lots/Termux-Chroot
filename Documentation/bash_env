@@ -37,12 +37,3 @@ export CCACHE_COMPRESS=1
 export CCACHE_COMPRESSLEVEL=6
 export CCACHE_BASEDIR="$HOME"
 export CCACHE_SLOPPINESS="file_macro,include_file_mtime,time_macros"
-
-# --- Kernel Build Aliases ---
-alias kconf='make O=out -j$(nproc) ARCH=arm64 SUBARCH=arm64 vendor/xiaomi/miatoll_defconfig'
-alias kclean='make O=out -j$(nproc) clean'
-alias kprop='make O=out -j$(nproc) mrproper'
-alias kmenu='make O=out -j$(nproc) ARCH=arm64 SUBARCH=arm64 menuconfig'
-
-# kmake: The definitive build command
-alias kmake='make O=out -j$(nproc) ARCH=arm64 SUBARCH=arm64 LLVM=1 LLVM_IAS=1 CLANG_TRIPLE="$CLANG_TRIPLE" CROSS_COMPILE="$CROSS_COMPILE" CC="ccache $CC" CXX="ccache $CXX" LD="$LD" AR="$AR" NM="$NM" STRIP="$STRIP" OBJCOPY="$OBJCOPY" OBJDUMP="$OBJDUMP" READELF="$READELF" HOSTCC="ccache $HOSTCC" HOSTCXX="ccache $HOSTCXX" HOSTLD="$HOSTLD" HOSTAR="$HOSTAR" '

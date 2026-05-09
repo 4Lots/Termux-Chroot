@@ -1,0 +1,31 @@
+# Define 8-bit colors using tput
+red="\[$(tput setaf 160)\]"
+bright_red="\[$(tput setaf 196)\]"
+light_purple="\[$(tput setaf 60)\]"
+orange="\[$(tput setaf 172)\]"
+blue="\[$(tput setaf 21)\]"
+light_blue="\[$(tput setaf 80)\]"
+bold="\[$(tput bold)\]"
+reset="\[$(tput sgr0)\]"
+
+# Direct assignments for Normal User
+username_color="${reset}${bold}${light_blue}"
+symbol_char="λ" 
+
+at_color=$reset$bold$orange
+host_color=$reset$bold$blue
+directory_color=$reset$light_purple
+etc_color=$reset$red
+
+# Error detection logic (shows [✗] on failure)
+on_error="\$([[ \$? != 0 ]] && echo \"${etc_color}[${at_color}✗${etc_color}]─\")"
+
+# Construct PS1
+PS1="${etc_color}┌─${on_error}["
+PS1+="${username_color}\u"
+PS1+="${at_color}@"
+PS1+="${host_color}\h"
+PS1+="${etc_color}]-[${directory_color}\w${etc_color}]\n"
+PS1+="└──╼ ${username_color}${symbol_char}${reset} "
+
+export PS1

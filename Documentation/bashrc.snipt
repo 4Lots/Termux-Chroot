@@ -1,0 +1,9 @@
+# Use custom bash prompt
+if [ -f ~/.bash_prompt ]; then
+  . ~/.bash_prompt
+fi
+
+# Use custom environment variable
+if [ -f ~/.bash_env ]; then
+  . ~/.bash_env
+fi
