@@ -3,7 +3,8 @@ groupadd -g 3004 aid_net_raw
 usermod -a -G aid_inet,aid_net_raw _apt
 usermod -a -G aid_inet,aid_net_raw root
 
-echo "nameserver 8.8.8.8" >> /etc/resolv.conf
-echo "nameserver 8.8.4.4"  >> /etc/resolv.conf
-echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+echo "nameserver 8.8.8.8" > /etc/resolv.conf
+echo "nameserver 8.8.4.4" > /etc/resolv.conf
+echo "nameserver 1.1.1.1" > /etc/resolv.conf
 echo "localhost 127.0.0.1" >> /etc/hosts
+echo "::1 ip6-localhost ip6-loopback" >> /etc/hosts

@@ -1,80 +1,129 @@
-#!/system/bin/sh
-#
-# ------------------------------------------------------------------------------
-# 1. Configuration Variables
-# ------------------------------------------------------------------------------
-# Centralized variables make it easy to update paths without hunting through code.
+#!/bin/sh
+# ==============================================================================
+# Ubuntu Chroot Launcher (Root-Agnostic & CLI Optimized)
+# ==============================================================================
+
+# 1. Professional Color Palette
+RED='\033[0;31m'
+GRN='\033[0;32m'
+YLW='\033[1;33m'
+CYN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# 2. Configuration Variables
 UBUNTU_ROOT="/data/local/ubuntu/rootfs"
 HOST_SDCARD="/sdcard"
 CHROOT_SDCARD="$UBUNTU_ROOT/media/sdcard"
 
+# 3. Dynamic Busybox Detection
+# This finds busybox regardless of whether you use KernelSU, Magisk, or APatch.
+BB_PATH=$(command -v busybox)
+
+DEFAULT_USER="minhaz"
+TARGET_USER="$DEFAULT_USER"
+
 # ------------------------------------------------------------------------------
-# 2. Pre-Execution Validation
+# 4. Argument Parsing
 # ------------------------------------------------------------------------------
-# Verify that the user executing the script has root (UID 0) privileges.
+while getopts "u:h" opt; do
+    case ${opt} in
+        u ) TARGET_USER=$OPTARG ;;
+        h ) echo "Usage: $0 [-u username]"; exit 0 ;;
+        * ) echo "Usage: $0 [-u username]"; exit 1 ;;
+    esac
+done
+
+# ------------------------------------------------------------------------------
+# 5. Professional Logger Functions
+# ------------------------------------------------------------------------------
+log_info()    { echo -e "${CYN}[INFO]${NC} $1"; }
+log_success() { echo -e "${GRN}[SUCCESS]${NC} $1"; }
+log_warn()    { echo -e "${YLW}[WARN]${NC} $1"; }
+log_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
+
+# ------------------------------------------------------------------------------
+# 6. Environment Functions
+# ------------------------------------------------------------------------------
+
+mount_env() {
+    log_info "Initializing Ubuntu chroot environment..."
+    
+    # Enable SUID for internal permissions (remounting /data)
+    $BB_PATH mount -o remount,dev,suid /data 2>/dev/null || true
+
+    log_info "Mounting virtual filesystems..."
+    $BB_PATH mount --bind /dev "$UBUNTU_ROOT/dev"
+    $BB_PATH mount --bind /sys "$UBUNTU_ROOT/sys"
+    $BB_PATH mount --bind /proc "$UBUNTU_ROOT/proc"
+    $BB_PATH mount -t devpts devpts "$UBUNTU_ROOT/dev/pts"
+    
+    # Check and Create /dev/shm
+    if [ ! -d "$UBUNTU_ROOT/dev/shm" ]; then
+        log_warn "Creating missing directory: /dev/shm"
+        mkdir -p "$UBUNTU_ROOT/dev/shm"
+    fi
+    $BB_PATH mount -t tmpfs -o size=128M tmpfs "$UBUNTU_ROOT/dev/shm"
+
+    # Check and Create /media/sdcard
+    if [ ! -d "$CHROOT_SDCARD" ]; then
+        log_warn "Creating missing directory: $CHROOT_SDCARD"
+        mkdir -p "$CHROOT_SDCARD"
+    fi
+    log_info "Mounting internal storage ($HOST_SDCARD)..."
+    $BB_PATH mount --bind "$HOST_SDCARD" "$CHROOT_SDCARD"
+}
+
+unmount_env() {
+    echo ""
+    log_info "Teardown initiated. Verifying filesystem states..."
+
+    # Reverse order for clean unmounting
+    MOUNTS="$CHROOT_SDCARD $UBUNTU_ROOT/dev/shm $UBUNTU_ROOT/dev/pts $UBUNTU_ROOT/dev $UBUNTU_ROOT/sys $UBUNTU_ROOT/proc"
+
+    for mp in $MOUNTS; do
+        if grep -q "$mp" /proc/mounts; then
+            if $BB_PATH umount "$mp" 2>/dev/null; then
+                log_success "Cleanly unmounted: $mp"
+            else
+                log_warn "Device busy: $mp. Attempting lazy unmount..."
+                $BB_PATH umount -l "$mp" 2>/dev/null
+            fi
+        fi
+    done
+    log_success "Environment teardown complete."
+}
+
+# ------------------------------------------------------------------------------
+# 7. Main Execution Flow
+# ------------------------------------------------------------------------------
+
+# Verify root privileges
 if [ "$(id -u)" -ne 0 ]; then
-    echo "[ERROR] Insufficient permissions. Please run this script as root (su)."
+    log_error "This script requires root. Please run 'su' first."
     exit 1
 fi
 
-# ------------------------------------------------------------------------------
-# 3. Environment Functions
-# ------------------------------------------------------------------------------
+# Ensure Busybox was actually found
+if [ -z "$BB_PATH" ]; then
+    log_error "Busybox binary not found in PATH. Please install Busybox."
+    exit 1
+else
+    log_info "Using Busybox found at: $BB_PATH"
+fi
 
-# Function: mount_env
-# Purpose: Initializes necessary virtual filesystems and external storage.
-mount_env() {
-    echo "[INFO] Initializing Ubuntu chroot environment..."
-    
-    # Enable SUID on the Android /data partition to allow su/sudo inside Ubuntu
-    busybox mount -o remount,dev,suid /data
+# Set trap to ensure cleanup happens on exit/interruption
+trap unmount_env EXIT HUP INT TERM
 
-    # Bind essential kernel and hardware interfaces
-    echo "[INFO] Mounting virtual filesystems (/dev, /sys, /proc)..."
-    busybox mount --bind /dev "$UBUNTU_ROOT/dev"
-    busybox mount --bind /sys "$UBUNTU_ROOT/sys"
-    busybox mount --bind /proc "$UBUNTU_ROOT/proc"
-    
-    # Mount devpts (pseudo-terminal master/slave) for terminal interaction
-    busybox mount -t devpts devpts "$UBUNTU_ROOT/dev/pts"
-
-    # Mount the Android shared storage inside the chroot
-    echo "[INFO] Mounting internal storage to $CHROOT_SDCARD..."
-    mkdir -p "$CHROOT_SDCARD"
-    busybox mount --bind "$HOST_SDCARD" "$CHROOT_SDCARD"
-}
-
-# Function: unmount_env
-# Purpose: Safely detaches all mounted filesystems to prevent resource locking.
-unmount_env() {
-    echo " "
-    echo "[INFO] Teardown initiated. Unmounting filesystems..."
-
-    # Use the lazy unmount flag (-l) to force detachment even if processes are lingering
-    busybox umount -l "$CHROOT_SDCARD"
-    busybox umount -l "$UBUNTU_ROOT/dev/pts"
-    busybox umount -l "$UBUNTU_ROOT/dev"
-    busybox umount -l "$UBUNTU_ROOT/sys"
-    busybox umount -l "$UBUNTU_ROOT/proc"
-
-    echo "[SUCCESS] Environment safely unmounted. Goodbye!"
-}
-
-# ------------------------------------------------------------------------------
-# 4. Main Execution Flow
-# ------------------------------------------------------------------------------
-
-# Step 1: Setup the environment
 mount_env
 
-# Step 2: Enter the chroot
-# The script will pause at this line while you are working inside Ubuntu.
-# The '/bin/su - root' command ensures a full login shell is loaded.
-echo "[SUCCESS] Entering Ubuntu shell. Type 'exit' to leave."
-echo "=============================================================================="
-busybox chroot "$UBUNTU_ROOT" /bin/su - minhaz
+echo -e "${GRN}==================================================================="
+echo -e " Entering Ubuntu as User: ${YLW}$TARGET_USER${NC}"
+echo -e "===================================================================${NC}"
 
-# Step 3: Cleanup the environment
-# This executes immediately upon exiting the Ubuntu shell.
-echo "=============================================================================="
-unmount_env
+# Start chroot with absolute Busybox path to survive the 'env -i' wipe
+env -i \
+    HOME="/home/$TARGET_USER" \
+    TERM="$TERM" \
+    PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+    USER="$TARGET_USER" \
+    $BB_PATH chroot "$UBUNTU_ROOT" /bin/su - "$TARGET_USER"
