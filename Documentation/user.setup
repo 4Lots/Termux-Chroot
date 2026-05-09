@@ -1,0 +1,2 @@
+adduser minhaz 
+usermod -a -G aid_inet,aid_net_raw minhaz

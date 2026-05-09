@@ -1,0 +1,48 @@
+# --- LLVM Path Definitions ---
+export LLVM_ROOT="$HOME/toolchains/llvm"
+export PATH="$LLVM_ROOT/bin:$PATH"
+export LD_LIBRARY_PATH="$LLVM_ROOT/lib:$LD_LIBRARY_PATH"
+
+# --- Kernel Identity (Global Exports) ---
+export KBUILD_BUILD_USER="MINHAZ"
+export KBUILD_BUILD_HOST="Ubuntu-Chroot"
+
+# --- Cross-Compilation Setup ---
+export CLANG_TRIPLE=aarch64-linux-gnu
+export CROSS_COMPILE=aarch64-linux-gnu-
+
+# --- Toolchain Variable Definitions ---
+# Target Tools
+export CC="clang"
+export CXX="clang++"
+export LD="ld.lld"
+export AR="llvm-ar"
+export NM="llvm-nm"
+export STRIP="llvm-strip"
+export OBJCOPY="llvm-objcopy"
+export OBJDUMP="llvm-objdump"
+export READELF="llvm-readelf"
+
+# Host Tools (Full Paths to /usr/bin)
+export HOSTCC="/usr/bin/clang"
+export HOSTCXX="/usr/bin/clang++"
+export HOSTLD="/usr/bin/ld.lld"
+export HOSTAR="/usr/bin/llvm-ar"
+
+# --- Ccache Optimized Setup ---
+export USE_CCACHE=1
+export CCACHE_DIR="$HOME/.cache/ccache"
+export CCACHE_MAXSIZE="2G"
+export CCACHE_COMPRESS=1
+export CCACHE_COMPRESSLEVEL=6
+export CCACHE_BASEDIR="$HOME"
+export CCACHE_SLOPPINESS="file_macro,include_file_mtime,time_macros"
+
+# --- Kernel Build Aliases ---
+alias kconf='make O=out -j$(nproc) ARCH=arm64 SUBARCH=arm64 vendor/xiaomi/miatoll_defconfig'
+alias kclean='make O=out -j$(nproc) clean'
+alias kprop='make O=out -j$(nproc) mrproper'
+alias kmenu='make O=out -j$(nproc) ARCH=arm64 SUBARCH=arm64 menuconfig'
+
+# kmake: The definitive build command
+alias kmake='make O=out -j$(nproc) ARCH=arm64 SUBARCH=arm64 LLVM=1 LLVM_IAS=1 CLANG_TRIPLE="$CLANG_TRIPLE" CROSS_COMPILE="$CROSS_COMPILE" CC="ccache $CC" CXX="ccache $CXX" LD="$LD" AR="$AR" NM="$NM" STRIP="$STRIP" OBJCOPY="$OBJCOPY" OBJDUMP="$OBJDUMP" READELF="$READELF" HOSTCC="ccache $HOSTCC" HOSTCXX="ccache $HOSTCXX" HOSTLD="$HOSTLD" HOSTAR="$HOSTAR" '
